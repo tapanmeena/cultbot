@@ -31,23 +31,37 @@ export function createNotifier({ notify: cfg, logger }) {
     });
   }
 
-  async function notify(message) {
-    if (targets.length === 0) return;
-    await Promise.all(
-      targets.map(async (target) => {
-        try {
-          await fetch(target.url, {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify(target.payload(message)),
-          });
-          logger.debug(`Notification sent via ${target.name}.`);
-        } catch (error) {
-          logger.warn(`Failed to send ${target.name} notification: ${error.message}`);
-        }
-      }),
-    );
+  async function send(target, message) {
+    try {
+      const response = await fetch(target.url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(target.payload(message)),
+      });
+      if (!response.ok) {
+        const body = await response.text().catch(() => '');
+        throw new Error(`HTTP ${response.status} ${response.statusText} ${body}`.trim());
+      }
+      logger.debug(`Notification sent via ${target.name}.`);
+      return { name: target.name, ok: true };
+    } catch (error) {
+      logger.warn(`Failed to send ${target.name} notification: ${error.message}`);
+      return { name: target.name, ok: false, error: error.message };
+    }
   }
 
-  return { notify, enabled: targets.length > 0 };
+  /**
+   * Sends a message to every configured channel.
+   * @returns {Promise<Array<{ name: string, ok: boolean, error?: string }>>}
+   */
+  async function notify(message) {
+    if (targets.length === 0) return [];
+    return Promise.all(targets.map((target) => send(target, message)));
+  }
+
+  return {
+    notify,
+    enabled: targets.length > 0,
+    channels: targets.map((target) => target.name),
+  };
 }

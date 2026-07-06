@@ -87,6 +87,7 @@ This validates your configuration and confirms that authentication works.
 | `npm run list-workouts` | List every available workout name                |
 | `npm run list-slots`    | List every available time slot                   |
 | `npm run doctor`        | Validate configuration and test authentication   |
+| `npm run test-notify`   | Send a test message to your notification channels |
 | `npm run help`          | Show the full command line help                  |
 
 You can also call the CLI directly for one-off overrides:
@@ -128,6 +129,16 @@ receive booking results. You can enable more than one at a time.
 | Slack    | `SLACK_WEBHOOK_URL`                         |
 | Telegram | `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` |
 | Generic  | `NOTIFY_WEBHOOK_URL`                         |
+
+After adding a channel to your `.env`, send a test message to confirm it works
+before relying on it:
+
+```bash
+npm run test-notify
+```
+
+The command reports delivery per channel and works even before your Cult.fit
+credentials are set, so you can verify notifications in isolation.
 
 ## Configuration reference
 
