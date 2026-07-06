@@ -1,0 +1,26 @@
+{
+  "name": "cultbot",
+  "version": "1.0.0",
+  "description": "Auto-book Cult.fit fitness classes with preferences, waitlist, retries, and notifications",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "cultbot": "index.js"
+  },
+  "scripts": {
+    "start": "node index.js book",
+    "book": "node index.js book",
+    "preview": "node index.js book --dry-run",
+    "doctor": "node index.js doctor",
+    "list-centers": "node index.js list-centers",
+    "list-workouts": "node index.js list-workouts",
+    "list-slots": "node index.js list-slots",
+    "help": "node index.js help"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

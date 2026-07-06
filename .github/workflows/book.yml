@@ -1,0 +1,58 @@
+name: Book Cult.fit Class
+
+on:
+  # Runs daily. Cult.fit typically opens the next booking window at a fixed
+  # time, so adjust this cron to a minute or two after it opens for you.
+  # This runs at 16:31 UTC (22:01 / 10:01 PM IST). Cron is always in UTC.
+  schedule:
+    - cron: '31 16 * * *'
+  # Lets you trigger a run manually from the GitHub Actions tab.
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview only (do not actually book)'
+        type: boolean
+        default: false
+
+jobs:
+  book:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Book class
+        env:
+          # Required secret: the full curl command copied from Cult.fit.
+          CURL_COMMAND: ${{ secrets.CURL_COMMAND }}
+          # Preferences: store these as repository "Variables" (Settings > Secrets and variables > Actions > Variables).
+          PREFERRED_CENTER: ${{ vars.PREFERRED_CENTER }}
+          PREFERRED_SLOTS: ${{ vars.PREFERRED_SLOTS }}
+          PREFERRED_WORKOUTS: ${{ vars.PREFERRED_WORKOUTS }}
+          ENABLE_WAITLIST: ${{ vars.ENABLE_WAITLIST }}
+          # Optional notification secrets (leave unset to disable).
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            node index.js book --dry-run
+          else
+            node index.js book
+          fi
