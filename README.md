@@ -1,8 +1,3 @@
----
-title: CultBot
-description: Automatically book your preferred Cult.fit fitness classes with waitlist support, retries, notifications, and scheduled runs.
----
-
 ## Overview
 
 CultBot books your preferred Cult.fit fitness class for you. It reads the class
