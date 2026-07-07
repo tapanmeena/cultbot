@@ -128,7 +128,7 @@ injection.
 2. Clone the repository and enter it:
 
    ```bash
-   git clone https://github.com/your-user/CultBot.git
+   git clone https://github.com/tapanmeena/CultBot.git
    cd CultBot
    ```
 
