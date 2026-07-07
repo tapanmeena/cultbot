@@ -96,18 +96,23 @@ node index.js list-slots --center 1018
 ## Run automatically with GitHub Actions
 
 A scheduled workflow lives at [.github/workflows/book.yml](.github/workflows/book.yml).
-To use it:
+The scheduled run is **opt-in**, so it never competes with a self-hosted
+scheduler (systemd, cron, or Docker). To use it:
 
 1. Push this repository to GitHub.
 2. Open Settings, then Secrets and variables, then Actions.
 3. Add a secret named `CURL_COMMAND` with your curl command.
 4. Add repository variables for `PREFERRED_CENTER`, `PREFERRED_SLOTS`,
    `PREFERRED_WORKOUTS`, and `ENABLE_WAITLIST`.
-5. Adjust the `cron` schedule in the workflow to run just after your booking
+5. Add a repository variable `ENABLE_GITHUB_SCHEDULE` set to `true` to turn the
+   daily scheduled booking on. Leave it unset (or set to anything else) to keep
+   the schedule off, for example when you book from a Raspberry Pi instead.
+6. Adjust the `cron` schedule in the workflow to run just after your booking
    window opens. Cron times are in UTC.
 
-You can also trigger a run manually from the Actions tab, with an optional
-dry-run toggle.
+You can always trigger a run manually from the Actions tab, with an optional
+dry-run toggle. Manual runs work even when `ENABLE_GITHUB_SCHEDULE` is off, so
+you can test without turning on the daily cron.
 
 > [!NOTE]
 > GitHub schedules run in UTC and may start a few minutes late under load. Set
@@ -119,6 +124,12 @@ CultBot is a one-shot command (`node index.js book`), so any scheduler can run
 it. A Raspberry Pi or an always-on home server is a good fit. Nothing in the
 booking logic is GitHub-specific: you only replace the schedule and the config
 injection.
+
+> [!NOTE]
+> If you schedule bookings on a device, leave the GitHub Action schedule off
+> (keep `ENABLE_GITHUB_SCHEDULE` unset, see
+> [Run automatically with GitHub Actions](#run-automatically-with-github-actions))
+> so the two do not both try to book.
 
 ### Prepare the device
 

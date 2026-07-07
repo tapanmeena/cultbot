@@ -18,6 +18,12 @@ jobs:
   book:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # The scheduled run is opt-in so it never competes with a self-hosted
+    # scheduler (systemd timer, cron, or Docker). Set a repository variable
+    # ENABLE_GITHUB_SCHEDULE=true (Settings > Secrets and variables > Actions >
+    # Variables) to let the daily cron actually book. Manual runs started from
+    # the Actions tab (workflow_dispatch) always work, so you can still test.
+    if: github.event_name != 'schedule' || vars.ENABLE_GITHUB_SCHEDULE == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v7
