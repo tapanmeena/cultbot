@@ -1,0 +1,34 @@
+# CultBot systemd service (one-shot).
+#
+# Runs `node index.js book` once and exits. The companion cultbot.timer starts
+# it on a schedule. The app loads its .env from WorkingDirectory via dotenv, so
+# no EnvironmentFile is needed.
+#
+# Before installing, edit the three values marked below to match your machine.
+# scripts/setup-pi.sh fills these in for you automatically.
+#
+# Manual install:
+#   sudo cp deploy/cultbot.service deploy/cultbot.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now cultbot.timer
+
+[Unit]
+Description=CultBot - book the daily Cult.fit class
+# Wait until the network is actually usable before running.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# EDIT: the Linux user that owns the CultBot checkout.
+User=pi
+# EDIT: the absolute path to the CultBot directory.
+WorkingDirectory=/home/pi/CultBot
+# EDIT: the absolute path to node (run `which node`). nvm users must point at
+# their versioned binary, e.g. /home/pi/.nvm/versions/node/v22.0.0/bin/node.
+ExecStart=/usr/bin/env node index.js book
+# Hard ceiling so a hung request cannot wedge the timer.
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

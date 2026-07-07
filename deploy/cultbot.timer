@@ -1,0 +1,22 @@
+# CultBot systemd timer.
+#
+# Starts cultbot.service on a schedule in the host's LOCAL time zone. Set the
+# zone first, e.g.:  sudo timedatectl set-timezone Asia/Kolkata
+#
+# Edit OnCalendar below to a minute or two after your booking window opens.
+
+[Unit]
+Description=Run CultBot daily to book the Cult.fit class
+
+[Timer]
+# Daily at 22:01 local time. Validate any expression with:
+#   systemd-analyze calendar '*-*-* 22:01:00'
+OnCalendar=*-*-* 22:01:00
+# If the machine was off or asleep at the scheduled time, run as soon as it is
+# back online. This is the key reliability win over plain cron.
+Persistent=true
+# Spread load so devices do not all fire at the exact same second.
+RandomizedDelaySec=30
+
+[Install]
+WantedBy=timers.target

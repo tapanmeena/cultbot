@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log*
+.env
+.env.*
+.git
+.gitignore
+.github
+.copilot-tracking
+*.log
+README.md
+Dockerfile
+.dockerignore
+docker-compose.yml
+deploy
+scripts

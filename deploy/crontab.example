@@ -1,0 +1,24 @@
+# CultBot cron example (Option A).
+#
+# Install:  crontab -e   (then paste one of the lines below)
+# Inspect:  crontab -l
+#
+# Cron uses the machine's LOCAL time. Confirm the zone first:
+#   timedatectl                                  # check "Time zone"
+#   sudo timedatectl set-timezone Asia/Kolkata   # set it if needed
+#
+# Fields:  minute hour day-of-month month day-of-week   command
+#
+# Edit two things before pasting:
+#   1. The time (here 22:01 = 10:01 PM) to a minute after your window opens.
+#   2. The path /home/pi/CultBot to your actual checkout.
+
+# Book daily at 22:01 local time, appending output to a log file.
+1 22 * * * cd /home/pi/CultBot && /usr/bin/env node index.js book >> /home/pi/CultBot/cultbot.log 2>&1
+
+# If node is not on cron's PATH (e.g. installed via nvm), use the absolute path
+# from `which node`:
+# 1 22 * * * cd /home/pi/CultBot && /home/pi/.nvm/versions/node/v22.0.0/bin/node index.js book >> /home/pi/CultBot/cultbot.log 2>&1
+
+# The redirected log grows forever. Rotate it with the ready-made snippet in
+# deploy/cultbot.logrotate.

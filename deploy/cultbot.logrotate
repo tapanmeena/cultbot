@@ -1,0 +1,20 @@
+# logrotate config for CultBot's cron log (Option A only).
+#
+# Cron redirects output to a file that grows forever; this rotates it. systemd
+# users do not need this - journald handles rotation.
+#
+# Install:
+#   sudo cp deploy/cultbot.logrotate /etc/logrotate.d/cultbot
+#   sudo nano /etc/logrotate.d/cultbot   # edit the path to match your checkout
+#
+# Test:  sudo logrotate --debug /etc/logrotate.d/cultbot
+
+/home/pi/CultBot/cultbot.log {
+    weekly
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}
