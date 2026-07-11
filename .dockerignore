@@ -2,6 +2,7 @@ node_modules
 npm-debug.log*
 .env
 .env.*
+cultbot.config.yaml
 .git
 .gitignore
 .github

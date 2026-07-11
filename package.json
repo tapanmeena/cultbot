@@ -11,15 +11,18 @@
     "start": "node index.js book",
     "book": "node index.js book",
     "preview": "node index.js book --dry-run",
+    "config:validate": "node index.js config validate",
     "doctor": "node index.js doctor",
     "test-notify": "node index.js test-notify",
     "list-centers": "node index.js list-centers",
     "list-workouts": "node index.js list-workouts",
     "list-slots": "node index.js list-slots",
-    "help": "node index.js help"
+    "help": "node index.js help",
+    "test": "node --test"
   },
   "dependencies": {
-    "dotenv": "^17.2.3"
+    "dotenv": "^17.2.3",
+    "yaml": "^2.9.0"
   },
   "engines": {
     "node": ">=18.0.0"

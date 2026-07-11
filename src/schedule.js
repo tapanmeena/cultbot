@@ -40,33 +40,89 @@ function* iterateClasses(daySchedule, centerId = null) {
 /**
  * True if the user already has a class booked for the day at the given center.
  */
-export function hasExistingBooking(daySchedule, centerId) {
-  for (const { cls } of iterateClasses(daySchedule, centerId)) {
+export function hasExistingBooking(daySchedule) {
+  for (const { cls } of iterateClasses(daySchedule)) {
     if (cls.state === 'BOOKED' || cls.isBooked === true) return true;
   }
   return false;
 }
 
 /**
- * Find bookable classes for a given slot and center that match one of the
- * preferred workouts, sorted by workout preference (their index in the list).
- * Matching is done by workout name (case-insensitive), which is stable across
- * the Cult.fit catalogue, unlike the numeric workout ids.
+ * Builds the ordered time dimension from explicit slots and live schedule slots
+ * inside the configured range.
  */
-export function findMatchingClasses(daySchedule, { slot, centerId, workouts, enableWaitlist }) {
-  const timeSlot = (daySchedule?.classByTimeList || []).find((item) => item.id === slot);
-  if (!timeSlot) return [];
+export function resolveCandidateTimes(daySchedule, { slots = [], timeRange }) {
+  const ordered = [...slots];
+  if (timeRange) {
+    const [start, end] = timeRange.split('-');
+    const ranged = (daySchedule?.classByTimeList || [])
+      .map((item) => normalizeScheduleTime(item.id))
+      .filter((slot) => slot && slot >= start && slot <= end)
+      .sort();
+    ordered.push(...ranged);
+  }
+  return [...new Set(ordered)];
+}
 
-  const center = (timeSlot.centerWiseClasses || []).find((item) => item.centerId === centerId);
-  if (!center) return [];
+function normalizeScheduleTime(value) {
+  const match = /^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(String(value));
+  if (!match) return null;
+  return `${match[1]}:${match[2]}:${match[3] ?? '00'}`;
+}
 
-  const wanted = workouts.map((workout) => workout.toLowerCase());
+/**
+ * Traverses every time/center/workout combination using selectionOrder from
+ * outermost to innermost.
+ */
+export function* iterateCandidates(preferences, times) {
+  const dimensions = {
+    times,
+    centers: preferences.centers,
+    workouts: preferences.workouts,
+  };
+  const selected = {};
+
+  function* walk(depth) {
+    if (depth === preferences.selectionOrder.length) {
+      yield {
+        slot: selected.times,
+        centerId: selected.centers,
+        workout: selected.workouts,
+      };
+      return;
+    }
+
+    const dimension = preferences.selectionOrder[depth];
+    for (const value of dimensions[dimension]) {
+      selected[dimension] = value;
+      yield* walk(depth + 1);
+    }
+  }
+
+  yield* walk(0);
+}
+
+/**
+ * Finds the class represented by one exact candidate when its state permits
+ * booking.
+ */
+export function findCandidateClass(daySchedule, candidate, enableWaitlist) {
+  const timeSlot = (daySchedule?.classByTimeList || []).find(
+    (item) => normalizeScheduleTime(item.id) === candidate.slot,
+  );
+  if (!timeSlot) return null;
+
+  const center = (timeSlot.centerWiseClasses || []).find(
+    (item) => item.centerId === candidate.centerId,
+  );
+  if (!center) return null;
+
   const bookable = new Set(enableWaitlist ? ['AVAILABLE', 'WAITLIST_AVAILABLE'] : ['AVAILABLE']);
+  const match = (center.classes || []).find(
+    (cls) => cls.workoutName === candidate.workout && bookable.has(cls.state),
+  );
 
-  return (center.classes || [])
-    .map((cls) => ({ ...cls, preference: wanted.indexOf((cls.workoutName || '').toLowerCase()) }))
-    .filter((cls) => cls.preference !== -1 && bookable.has(cls.state))
-    .sort((a, b) => a.preference - b.preference);
+  return match ? { ...match, centerId: candidate.centerId, slot: candidate.slot } : null;
 }
 
 /**

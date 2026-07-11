@@ -1,0 +1,42 @@
+version: 1
+
+booking:
+  date: last
+  dryRun: false
+  maxRetries: 3
+  retryDelayMs: 1000
+
+logging:
+  level: info
+
+default:
+  centers: [1018]
+  timeRange: "06:00-21:00"
+  workouts:
+    - "HRX WORKOUT"
+  enableWaitlist: true
+
+# Profiles and calendar rules are optional. Unlisted days use default.
+profiles:
+  weekend:
+    centers: [1042, 1018]
+    timeRange: "09:00-12:00"
+    workouts:
+      - "YOGA"
+      - "DANCE FITNESS"
+
+weekly:
+  saturday:
+    profile: weekend
+  sunday:
+    skip: true
+
+# Exact dates override weekly rules.
+dates:
+  "2026-07-19":
+    profile: default
+  "2026-07-20":
+    skip: true
+
+# selectionOrder is optional. The default is:
+# selectionOrder: [times, centers, workouts]
