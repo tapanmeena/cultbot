@@ -1,6 +1,6 @@
 /**
  * Minimal leveled logger with timestamps and optional ANSI colors.
- * No dependencies. Respects LOG_LEVEL and the NO_COLOR convention.
+ * No dependencies. Uses the configured YAML level and the NO_COLOR convention.
  */
 
 const LEVELS = { debug: 10, info: 20, success: 20, warn: 30, error: 40, silent: 100 };

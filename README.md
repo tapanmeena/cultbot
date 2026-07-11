@@ -30,12 +30,13 @@ GitHub Action book for you every morning.
 pnpm install
 ```
 
-### 2. Create your configuration
+### 2. Create your configuration and secrets
 
-Copy the example file and open it in your editor:
+Copy both example files:
 
 ```bash
 cp .env.example .env
+cp cultbot.config.example.yaml cultbot.config.yaml
 ```
 
 ### 3. Get your credentials
@@ -54,23 +55,34 @@ CultBot authenticates as you, using your browser session.
 
 ### 4. Find your preferences
 
-Use the discovery commands to fill in the rest of your `.env`:
+Use the discovery commands to find values for `cultbot.config.yaml`:
 
 ```bash
-npm run list-centers    # find your PREFERRED_CENTER id
-npm run list-workouts   # find exact PREFERRED_WORKOUTS names
-npm run list-slots      # find PREFERRED_SLOTS times
+npm run list-centers    # find center IDs
+npm run list-workouts   # find exact workout names
+npm run list-slots      # find exact class times
 ```
 
-Then set `PREFERRED_CENTER`, `PREFERRED_SLOTS`, and `PREFERRED_WORKOUTS` in `.env`.
+The smallest useful configuration applies to every day:
+
+```yaml
+version: 1
+
+default:
+  centers: [1018]
+  timeRange: "06:00-21:00"
+  workouts: ["HRX WORKOUT"]
+```
 
 ### 5. Verify everything
 
 ```bash
+npm run config:validate
 npm run doctor
 ```
 
-This validates your configuration and confirms that authentication works.
+The first command validates YAML without authentication or network access. The
+second confirms that authentication and the live schedule work.
 
 ## Usage
 
@@ -78,6 +90,7 @@ This validates your configuration and confirms that authentication works.
 |-------------------------|--------------------------------------------------|
 | `npm run book`          | Book your preferred class for the target day     |
 | `npm run preview`       | Dry run that shows what would be booked          |
+| `npm run config:validate` | Validate YAML without authentication or network |
 | `npm run list-centers`  | List every center and its ID                     |
 | `npm run list-workouts` | List every available workout name                |
 | `npm run list-slots`    | List every available time slot                   |
@@ -91,6 +104,7 @@ You can also call the CLI directly for one-off overrides:
 node index.js book --dry-run
 node index.js book --center 1018
 node index.js list-slots --center 1018
+node index.js config show --date 2026-07-13
 ```
 
 ## Run automatically with GitHub Actions
@@ -102,8 +116,8 @@ scheduler (systemd, cron, or Docker). To use it:
 1. Push this repository to GitHub.
 2. Open Settings, then Secrets and variables, then Actions.
 3. Add a secret named `CURL_COMMAND` with your curl command.
-4. Add repository variables for `PREFERRED_CENTER`, `PREFERRED_SLOTS`,
-   `PREFERRED_WORKOUTS`, and `ENABLE_WAITLIST`.
+4. Add a multiline repository variable named `CULTBOT_CONFIG_YAML` containing
+   the complete contents of your validated `cultbot.config.yaml`.
 5. Add a repository variable `ENABLE_GITHUB_SCHEDULE` set to `true` to turn the
    daily scheduled booking on. Leave it unset (or set to anything else) to keep
    the schedule off, for example when you book from a Raspberry Pi instead.
@@ -162,8 +176,9 @@ injection.
    ./scripts/setup-pi.sh
    ```
 
-   Then edit `.env` with your `CURL_COMMAND` and preferences, exactly as in the
-   [Setup](#setup) section above, and verify with `npm run doctor`.
+   Then edit `.env` with your `CURL_COMMAND`, edit `cultbot.config.yaml` with
+   your preferences, and verify with `npm run config:validate` and
+   `npm run doctor`.
 
 Now choose one of the three scheduling paths below.
 
@@ -223,7 +238,9 @@ Best for a non-Pi home server or NAS. The container runs one booking pass and
 exits:
 
 ```bash
-cp .env.example .env               # fill it in
+cp .env.example .env
+cp cultbot.config.example.yaml cultbot.config.yaml
+# Fill in .env and cultbot.config.yaml.
 docker compose build
 docker compose run --rm cultbot            # book once
 docker compose run --rm cultbot book --dry-run   # preview
@@ -282,26 +299,97 @@ credentials are set, so you can verify notifications in isolation.
 
 ## Configuration reference
 
-One of `CURL_COMMAND` or `COOKIES` is required. Everything else is optional,
-though setting the preferences is strongly recommended.
+### Secrets
 
-| Variable             | Default | Description                                            |
-|----------------------|---------|--------------------------------------------------------|
-| `CURL_COMMAND`       | none    | Full curl command copied from Cult.fit (provides auth) |
-| `COOKIES`            | none    | Raw cookie string, as an alternative to `CURL_COMMAND` |
-| `PREFERRED_CENTER`   | none    | Numeric center ID from `npm run list-centers`          |
-| `PREFERRED_SLOTS`    | none    | Times to try, in order (`07:00:00,08:00:00`)           |
-| `PREFERRED_WORKOUTS` | none    | Workout names in priority order (comma-separated)      |
-| `ENABLE_WAITLIST`    | `true`  | Join the waitlist when a class is full                 |
-| `BOOK_DATE`          | `last`  | `last`, `first`, or a specific day id                  |
-| `DRY_RUN`            | `false` | Preview without booking                                |
-| `MAX_RETRIES`        | `3`     | Retry attempts for failed requests                     |
-| `RETRY_DELAY`        | `1000`  | Base backoff between retries, in milliseconds          |
-| `LOG_LEVEL`          | `info`  | `debug`, `info`, `warn`, or `error`                    |
+`CURL_COMMAND` is required in `.env` locally or as a GitHub Actions secret.
+Optional notification credentials also remain environment secrets:
+`DISCORD_WEBHOOK_URL`, `SLACK_WEBHOOK_URL`, `TELEGRAM_BOT_TOKEN`,
+`TELEGRAM_CHAT_ID`, and `NOTIFY_WEBHOOK_URL`.
 
-> [!TIP]
-> `PREFERRED_WORKOUTS` accepts several names. CultBot tries them in order, so you
-> can set a fallback such as `HRX WORKOUT,EVOLVE YOGA,DANCE FITNESS`.
+All non-secret settings live in `cultbot.config.yaml`. GitHub Actions reads the
+same document from the multiline repository variable `CULTBOT_CONFIG_YAML`.
+Inline YAML takes precedence over the local file.
+
+### Booking preferences
+
+```yaml
+version: 1
+
+default:
+  centers: [1018, 1042]
+  slots: ["07:00", "08:00"]
+  timeRange: "06:00-09:00"
+  workouts: ["HRX WORKOUT", "DANCE FITNESS"]
+  enableWaitlist: true
+  selectionOrder: [times, centers, workouts]
+```
+
+`centers`, `slots`, and `workouts` are ordered. Exact slots are tried first;
+other live schedule slots inside the inclusive `timeRange` follow
+chronologically. `selectionOrder` is optional and defaults to
+`[times, centers, workouts]`. It accepts any permutation of `times`, `centers`,
+and `workouts`.
+
+For example, the default order tries 07:00 at every center before 08:00:
+
+```text
+07:00 / center 1018 / HRX WORKOUT
+07:00 / center 1042 / HRX WORKOUT
+08:00 / center 1018 / HRX WORKOUT
+08:00 / center 1042 / HRX WORKOUT
+```
+
+### Profiles and calendar rules
+
+The `default` preference applies every day. Profiles and rules are optional:
+
+```yaml
+profiles:
+  weekend:
+    centers: [1042, 1018]
+    timeRange: "09:00-12:00"
+    workouts: ["YOGA", "DANCE FITNESS"]
+
+weekly:
+  saturday:
+    profile: weekend
+  sunday:
+    skip: true
+
+dates:
+  "2026-07-19":
+    profile: default
+  "2026-07-20":
+    skip: true
+```
+
+Resolution order is exact date, weekday, then `default`. Profiles and inline
+rules inherit from `default`; supplied arrays replace inherited arrays.
+`profile: default` can re-enable a date whose weekday is normally skipped.
+
+Inspect any date without contacting Cult.fit:
+
+```bash
+node index.js config show --date 2026-07-19
+```
+
+### Operational settings
+
+```yaml
+booking:
+  date: last
+  dryRun: false
+  maxRetries: 3
+  retryDelayMs: 1000
+
+logging:
+  level: info
+```
+
+Legacy `PREFERRED_*`, `ENABLE_WAITLIST`, `BOOK_DATE`, `DRY_RUN`, `MAX_RETRIES`,
+`RETRY_DELAY`, `LOG_LEVEL`, `COOKIES`, and related authentication variables are
+no longer read. Move those values to YAML and use `CURL_COMMAND` for
+authentication.
 
 ## Project structure
 
@@ -310,7 +398,8 @@ CultBot/
   index.js                     Thin entry point
   src/
     cli.js                     Command routing and flag parsing
-    config.js                  Loads and validates configuration
+    config.js                  Loads authentication and notification secrets
+    profile-config.js          Loads, validates, and resolves YAML configuration
     curl-parser.js             Extracts auth from a pasted curl command
     api-client.js              Cult.fit HTTP client with retries and backoff
     schedule.js                Pure schedule-parsing helpers
@@ -327,6 +416,7 @@ CultBot/
     setup-pi.sh                Raspberry Pi / local server setup helper
   Dockerfile                   Container image (Option D)
   docker-compose.yml           One-shot Compose service
+  cultbot.config.example.yaml  Safe non-secret configuration example
   .dockerignore                Files excluded from the image build
   .github/workflows/book.yml   Scheduled GitHub Action
   .env.example                 Configuration template
@@ -335,7 +425,10 @@ CultBot/
 ## Troubleshooting
 
 * Authentication fails: your session expired. Copy a fresh curl command into `.env`.
-* No class booked: run `npm run preview` to see what CultBot found, then check that your workout name matches `npm run list-workouts` exactly.
+* Configuration rejected: run `npm run config:validate`; errors include the
+  exact YAML field that needs correction.
+* No class booked: run `npm run preview` to see the selected profile and
+  candidate priority, then check workout names with `npm run list-workouts`.
 * Wrong center: confirm the ID with `npm run list-centers`.
 * Verbose output: add `--verbose` to any command for debug logging.
 

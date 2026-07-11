@@ -1,11 +1,12 @@
 # CultBot with Docker Compose (Option D) - best for non-Pi home servers / NAS.
 #
 # Quick start:
-#   1. cp .env.example .env    and fill it in (CURL_COMMAND, PREFERRED_*, webhooks)
-#   2. Optionally add TZ=Your/Zone to .env so scheduled times match local time.
-#   3. docker compose build
-#   4. docker compose run --rm cultbot               # book once now
-#   5. docker compose run --rm cultbot book --dry-run  # preview only
+#   1. cp .env.example .env && cp cultbot.config.example.yaml cultbot.config.yaml
+#   2. Fill in CURL_COMMAND in .env and preferences in cultbot.config.yaml.
+#   3. Optionally add TZ=Your/Zone to .env so scheduled times match local time.
+#   4. docker compose build
+#   5. docker compose run --rm cultbot                 # book once now
+#   6. docker compose run --rm cultbot book --dry-run  # preview only
 #
 # Scheduling: this service runs once and exits (restart: "no"). Trigger it on a
 # schedule from the host - e.g. a cron/systemd entry that calls
@@ -15,9 +16,12 @@ services:
   cultbot:
     build: .
     image: cultbot:latest
-    # Load configuration from .env (CURL_COMMAND, PREFERRED_*, webhooks, ...).
+    # Load secrets from .env.
     env_file:
       - .env
+    # Mount the non-secret YAML configuration read by CultBot.
+    volumes:
+      - ./cultbot.config.yaml:/app/cultbot.config.yaml:ro
     environment:
       # Container time zone, so log/schedule times match your local clock.
       TZ: ${TZ:-Asia/Kolkata}

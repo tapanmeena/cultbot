@@ -2,8 +2,11 @@ import {
   selectDay,
   getDaySchedule,
   hasExistingBooking,
-  findMatchingClasses,
+  resolveCandidateTimes,
+  iterateCandidates,
+  findCandidateClass,
 } from './schedule.js';
+import { normalizeCalendarDate, resolvePreferences } from './profile-config.js';
 
 /**
  * Runs the end-to-end booking flow:
@@ -14,10 +17,9 @@ import {
  * @returns {Promise<{ status: string, message: string, class?: object, date?: string }>}
  */
 export async function runBooking({ apiClient, config, logger, notifier, options = {} }) {
-  const { preferences, booking } = config;
+  const { booking } = config;
   const dryRun = options.dryRun ?? booking.dryRun;
-  const dateSelector = options.date ?? preferences.date;
-  const centerId = options.center ?? preferences.center;
+  const dateSelector = options.date ?? booking.date;
 
   const finish = async (result) => {
     switch (result.status) {
@@ -48,44 +50,58 @@ export async function runBooking({ apiClient, config, logger, notifier, options 
     return finish({ status: 'error', message: 'No bookable days were found in the schedule.' });
   }
 
-  const daySchedule = getDaySchedule(classes, dayId);
-  logger.info(`Target date: ${dayId}`);
+  let targetDate;
+  try {
+    targetDate = normalizeCalendarDate(String(dayId), 'target schedule date');
+  } catch (error) {
+    return finish({ status: 'error', message: error.message });
+  }
 
-  if (hasExistingBooking(daySchedule, centerId)) {
+  const resolved = resolvePreferences(config.application, targetDate);
+  if (resolved.skip) {
     return finish({
       status: 'skipped',
-      message: `Already booked for ${dayId}. Nothing to do.`,
-      date: dayId,
+      message: `Booking is skipped for ${targetDate} by its ${resolved.source} rule.`,
+      date: targetDate,
     });
   }
 
-  for (const slot of preferences.slots) {
-    const matches = findMatchingClasses(daySchedule, {
-      slot,
-      centerId,
-      workouts: preferences.workouts,
-      enableWaitlist: preferences.enableWaitlist,
+  const preferences = {
+    ...resolved.preferences,
+    ...(options.center !== undefined ? { centers: [options.center] } : {}),
+  };
+  const daySchedule = getDaySchedule(classes, dayId);
+  logger.info(
+    `Target date: ${targetDate}; profile: ${resolved.profile}; priority: ${preferences.selectionOrder.join(' -> ')}.`,
+  );
+
+  if (hasExistingBooking(daySchedule)) {
+    return finish({
+      status: 'skipped',
+      message: `Already booked for ${targetDate}. Nothing to do.`,
+      date: targetDate,
     });
+  }
 
-    if (matches.length === 0) {
-      logger.debug(`No preferred workout available at ${slot}.`);
-      continue;
-    }
-
-    const target = matches[0];
+  const times = resolveCandidateTimes(daySchedule, preferences);
+  for (const candidate of iterateCandidates(preferences, times)) {
+    const target = findCandidateClass(daySchedule, candidate, preferences.enableWaitlist);
+    if (!target) continue;
     const isWaitlist = target.state === 'WAITLIST_AVAILABLE';
     const context = isWaitlist
       ? `waitlist (${target.waitlistInfo?.waitlistedUserCount ?? 0} ahead)`
       : `${target.availableSeats ?? '?'} seats open`;
 
-    logger.info(`Found "${target.workoutName}" at ${slot} — ${context}.`);
+    logger.info(
+      `Found "${target.workoutName}" at ${candidate.slot}, center ${candidate.centerId} — ${context}.`,
+    );
 
     if (dryRun) {
       return finish({
         status: 'dry-run',
-        message: `[DRY RUN] Would ${isWaitlist ? 'join waitlist for' : 'book'} "${target.workoutName}" at ${slot} on ${dayId}.`,
+        message: `[DRY RUN] Would ${isWaitlist ? 'join waitlist for' : 'book'} "${target.workoutName}" at ${candidate.slot}, center ${candidate.centerId}, on ${targetDate}.`,
         class: target,
-        date: dayId,
+        date: targetDate,
       });
     }
 
@@ -94,15 +110,15 @@ export async function runBooking({ apiClient, config, logger, notifier, options 
 
     return finish({
       status: isWaitlist ? 'waitlisted' : 'booked',
-      message: `${isWaitlist ? 'Joined waitlist for' : 'Booked'} "${target.workoutName}" at ${slot} on ${dayId}.`,
+      message: `${isWaitlist ? 'Joined waitlist for' : 'Booked'} "${target.workoutName}" at ${candidate.slot}, center ${candidate.centerId}, on ${targetDate}.`,
       class: target,
-      date: dayId,
+      date: targetDate,
     });
   }
 
   return finish({
     status: 'unavailable',
-    message: `No preferred workout (${preferences.workouts.join(', ') || 'none set'}) available on ${dayId} at your slots (${preferences.slots.join(', ') || 'none set'}).`,
-    date: dayId,
+    message: `No preferred workout (${preferences.workouts.join(', ')}) was available on ${targetDate} at centers (${preferences.centers.join(', ')}) and times (${times.join(', ') || 'none matched'}).`,
+    date: targetDate,
   });
 }

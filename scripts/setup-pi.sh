@@ -5,7 +5,7 @@
 # What it does:
 #   1. Checks that Node 18+ and pnpm are available.
 #   2. Installs dependencies (pnpm install --frozen-lockfile).
-#   3. Creates .env from .env.example (chmod 600) if it does not exist.
+#   3. Creates .env and cultbot.config.yaml from their examples if needed.
 #   4. Optionally installs and enables the systemd timer (Option B), filling in
 #      this machine's user, path, and node binary.
 #
@@ -64,6 +64,14 @@ else
   chmod 600 .env
   info "Created .env from .env.example (chmod 600). Edit it before your first run:"
   info "  nano ${REPO_DIR}/.env"
+fi
+
+if [ -f cultbot.config.yaml ]; then
+  info "cultbot.config.yaml already exists - leaving it untouched."
+else
+  cp cultbot.config.example.yaml cultbot.config.yaml
+  info "Created cultbot.config.yaml from cultbot.config.example.yaml. Edit it before your first run:"
+  info "  nano ${REPO_DIR}/cultbot.config.yaml"
 fi
 
 # --- 4. systemd timer (optional) ---

@@ -15,7 +15,8 @@ RUN pnpm install --frozen-lockfile --prod
 COPY index.js ./
 COPY src ./src
 
-# Configuration comes from environment variables (see docker-compose.yml or -e).
+# Secrets come from environment variables; application configuration is mounted
+# at /app/cultbot.config.yaml or supplied through CULTBOT_CONFIG_YAML.
 # Default command runs one booking pass and exits; override the CMD to run other
 # subcommands, e.g. `docker run cultbot book --dry-run` or `docker run cultbot doctor`.
 ENTRYPOINT ["node", "index.js"]
