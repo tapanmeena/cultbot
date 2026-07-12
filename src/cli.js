@@ -37,9 +37,9 @@ Options:
 
 Examples:
   node index.js config validate
-  node index.js config show --date 2026-07-13
+  node index.js config show --date 2030-01-07
   node index.js book --dry-run
-  node index.js list-slots --center 1018
+  node index.js list-slots --center 1001
 `;
 
 const DEFAULT_BOOKING = {

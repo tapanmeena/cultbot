@@ -1,3 +1,6 @@
+# All center IDs, workout names, times, and dates below are examples.
+# Run the list-centers, list-workouts, and list-slots commands, then replace
+# these values with options available for your Cult.fit account.
 version: 1
 
 booking:
@@ -10,20 +13,20 @@ logging:
   level: info
 
 default:
-  centers: [1018]
-  timeRange: "06:00-21:00"
+  centers: [1001]
+  slots: ["07:00", "08:00"]
   workouts:
-    - "HRX WORKOUT"
+    - "YOGA"
   enableWaitlist: true
 
 # Profiles and calendar rules are optional. Unlisted days use default.
 profiles:
   weekend:
-    centers: [1042, 1018]
+    centers: [2001, 1001]
     timeRange: "09:00-12:00"
     workouts:
-      - "YOGA"
       - "DANCE FITNESS"
+      - "YOGA"
 
 weekly:
   saturday:
@@ -33,7 +36,7 @@ weekly:
 
 # Exact dates override weekly rules.
 dates:
-  "2026-07-19":
+  "203026-07-19":
     profile: default
   "2026-07-20":
     skip: true

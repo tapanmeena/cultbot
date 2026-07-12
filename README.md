@@ -1,3 +1,8 @@
+---
+title: CultBot
+description: Auto-book Cult.fit fitness classes with schedules, preferences, waitlists, retries, and notifications
+---
+
 ## Overview
 
 CultBot books your preferred Cult.fit fitness class for you. It reads the class
@@ -65,14 +70,23 @@ npm run list-slots      # find exact class times
 
 The smallest useful configuration applies to every day:
 
+> [!NOTE]
+> All center IDs, workout names, times, and dates in the examples are
+> illustrative. Replace them with values returned for your account by the
+> discovery commands above.
+
 ```yaml
 version: 1
 
 default:
-  centers: [1018]
+  centers: [1001]
   timeRange: "06:00-21:00"
-  workouts: ["HRX WORKOUT"]
+  workouts: ["YOGA"]
 ```
+
+For profiles, weekday and date rules, preference ordering, waitlist behavior,
+and real-life examples, continue with the
+[configuration guide](docs/configuration-guide.md).
 
 ### 5. Verify everything
 
@@ -86,25 +100,25 @@ second confirms that authentication and the live schedule work.
 
 ## Usage
 
-| Command                 | What it does                                     |
-|-------------------------|--------------------------------------------------|
-| `npm run book`          | Book your preferred class for the target day     |
-| `npm run preview`       | Dry run that shows what would be booked          |
-| `npm run config:validate` | Validate YAML without authentication or network |
-| `npm run list-centers`  | List every center and its ID                     |
-| `npm run list-workouts` | List every available workout name                |
-| `npm run list-slots`    | List every available time slot                   |
-| `npm run doctor`        | Validate configuration and test authentication   |
-| `npm run test-notify`   | Send a test message to your notification channels |
-| `npm run help`          | Show the full command line help                  |
+| Command                   | What it does                                      |
+|---------------------------|---------------------------------------------------|
+| `npm run book`            | Book your preferred class for the target day      |
+| `npm run preview`         | Dry run that shows what would be booked           |
+| `npm run config:validate` | Validate YAML without authentication or network   |
+| `npm run list-centers`    | List every center and its ID                      |
+| `npm run list-workouts`   | List every available workout name                 |
+| `npm run list-slots`      | List every available time slot                    |
+| `npm run doctor`          | Validate configuration and test authentication    |
+| `npm run test-notify`     | Send a test message to your notification channels |
+| `npm run help`            | Show the full command line help                   |
 
 You can also call the CLI directly for one-off overrides:
 
 ```bash
 node index.js book --dry-run
-node index.js book --center 1018
-node index.js list-slots --center 1018
-node index.js config show --date 2026-07-13
+node index.js book --center 1001
+node index.js list-slots --center 1001
+node index.js config show --date 2030-01-07
 ```
 
 ## Run automatically with GitHub Actions
@@ -280,12 +294,12 @@ node ~/CultBot/index.js doctor    # confirm auth works
 Notifications are optional. Set any of these in `.env` (or as GitHub secrets) to
 receive booking results. You can enable more than one at a time.
 
-| Channel  | Variables                                  |
-|----------|--------------------------------------------|
+| Channel  | Variables                                   |
+|----------|---------------------------------------------|
 | Discord  | `DISCORD_WEBHOOK_URL`                       |
 | Slack    | `SLACK_WEBHOOK_URL`                         |
 | Telegram | `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` |
-| Generic  | `NOTIFY_WEBHOOK_URL`                         |
+| Generic  | `NOTIFY_WEBHOOK_URL`                        |
 
 After adding a channel to your `.env`, send a test message to confirm it works
 before relying on it:
@@ -297,94 +311,16 @@ npm run test-notify
 The command reports delivery per channel and works even before your Cult.fit
 credentials are set, so you can verify notifications in isolation.
 
-## Configuration reference
+## Configuration
 
-### Secrets
+Use the [configuration guide](docs/configuration-guide.md) for the complete
+field reference, inheritance rules, selection-order behavior, copy-ready
+scenarios, validation workflow, and deployment-specific configuration.
 
-`CURL_COMMAND` is required in `.env` locally or as a GitHub Actions secret.
-Optional notification credentials also remain environment secrets:
-`DISCORD_WEBHOOK_URL`, `SLACK_WEBHOOK_URL`, `TELEGRAM_BOT_TOKEN`,
-`TELEGRAM_CHAT_ID`, and `NOTIFY_WEBHOOK_URL`.
-
-All non-secret settings live in `cultbot.config.yaml`. GitHub Actions reads the
-same document from the multiline repository variable `CULTBOT_CONFIG_YAML`.
-Inline YAML takes precedence over the local file.
-
-### Booking preferences
-
-```yaml
-version: 1
-
-default:
-  centers: [1018, 1042]
-  slots: ["07:00", "08:00"]
-  timeRange: "06:00-09:00"
-  workouts: ["HRX WORKOUT", "DANCE FITNESS"]
-  enableWaitlist: true
-  selectionOrder: [times, centers, workouts]
-```
-
-`centers`, `slots`, and `workouts` are ordered. Exact slots are tried first;
-other live schedule slots inside the inclusive `timeRange` follow
-chronologically. `selectionOrder` is optional and defaults to
-`[times, centers, workouts]`. It accepts any permutation of `times`, `centers`,
-and `workouts`.
-
-For example, the default order tries 07:00 at every center before 08:00:
-
-```text
-07:00 / center 1018 / HRX WORKOUT
-07:00 / center 1042 / HRX WORKOUT
-08:00 / center 1018 / HRX WORKOUT
-08:00 / center 1042 / HRX WORKOUT
-```
-
-### Profiles and calendar rules
-
-The `default` preference applies every day. Profiles and rules are optional:
-
-```yaml
-profiles:
-  weekend:
-    centers: [1042, 1018]
-    timeRange: "09:00-12:00"
-    workouts: ["YOGA", "DANCE FITNESS"]
-
-weekly:
-  saturday:
-    profile: weekend
-  sunday:
-    skip: true
-
-dates:
-  "2026-07-19":
-    profile: default
-  "2026-07-20":
-    skip: true
-```
-
-Resolution order is exact date, weekday, then `default`. Profiles and inline
-rules inherit from `default`; supplied arrays replace inherited arrays.
-`profile: default` can re-enable a date whose weekday is normally skipped.
-
-Inspect any date without contacting Cult.fit:
-
-```bash
-node index.js config show --date 2026-07-19
-```
-
-### Operational settings
-
-```yaml
-booking:
-  date: last
-  dryRun: false
-  maxRetries: 3
-  retryDelayMs: 1000
-
-logging:
-  level: info
-```
+Keep non-secret settings in `cultbot.config.yaml`. Environment-only deployments
+can provide the same document through `CULTBOT_CONFIG_YAML`, which takes
+precedence over the local file. Keep `CURL_COMMAND` and notification credentials
+in `.env` locally or in deployment secrets.
 
 Legacy `PREFERRED_*`, `ENABLE_WAITLIST`, `BOOK_DATE`, `DRY_RUN`, `MAX_RETRIES`,
 `RETRY_DELAY`, `LOG_LEVEL`, `COOKIES`, and related authentication variables are
