@@ -5,6 +5,7 @@ import {
   resolveCandidateTimes,
   iterateCandidates,
   findCandidateClass,
+  getCenterName,
 } from './schedule.js';
 import { normalizeCalendarDate, resolvePreferences } from './profile-config.js';
 
@@ -88,18 +89,22 @@ export async function runBooking({ apiClient, config, logger, notifier, options 
     const target = findCandidateClass(daySchedule, candidate, preferences.enableWaitlist);
     if (!target) continue;
     const isWaitlist = target.state === 'WAITLIST_AVAILABLE';
+    const centerName = getCenterName(classes, candidate.centerId);
+    const centerLabel = centerName
+      ? `${centerName} (ID ${candidate.centerId})`
+      : `ID ${candidate.centerId}`;
     const context = isWaitlist
       ? `waitlist (${target.waitlistInfo?.waitlistedUserCount ?? 0} ahead)`
       : `${target.availableSeats ?? '?'} seats open`;
 
     logger.info(
-      `Found "${target.workoutName}" at ${candidate.slot}, center ${candidate.centerId} — ${context}.`,
+      `Found "${target.workoutName}" at ${candidate.slot}, center ${centerLabel} — ${context}.`,
     );
 
     if (dryRun) {
       return finish({
         status: 'dry-run',
-        message: `[DRY RUN] Would ${isWaitlist ? 'join waitlist for' : 'book'} "${target.workoutName}" at ${candidate.slot}, center ${candidate.centerId}, on ${targetDate}.`,
+        message: `[DRY RUN] Would ${isWaitlist ? 'join waitlist for' : 'book'} "${target.workoutName}" at ${candidate.slot}, center ${centerLabel}, on ${targetDate}.`,
         class: target,
         date: targetDate,
       });
@@ -110,7 +115,7 @@ export async function runBooking({ apiClient, config, logger, notifier, options 
 
     return finish({
       status: isWaitlist ? 'waitlisted' : 'booked',
-      message: `${isWaitlist ? 'Joined waitlist for' : 'Booked'} "${target.workoutName}" at ${candidate.slot}, center ${candidate.centerId}, on ${targetDate}.`,
+      message: `${isWaitlist ? 'Joined waitlist for' : 'Booked'} "${target.workoutName}" at ${candidate.slot}, center ${centerLabel}, on ${targetDate}.`,
       class: target,
       date: targetDate,
     });

@@ -28,6 +28,10 @@ function createNotifier() {
 function createSchedule({ bookedElsewhere = false } = {}) {
   return {
     days: [{ id: '2026-07-13' }],
+    centerInfoMap: {
+      101: { centerName: 'Indiranagar' },
+      102: { centerName: 'Koramangala' },
+    },
     classByDateMap: {
       '2026-07-13': {
         classByTimeList: [
@@ -77,6 +81,41 @@ default:
   assert.equal(result.status, 'dry-run');
   assert.equal(result.class.id, 'b');
   assert.deepEqual(booked, []);
+});
+
+test('booking logs and notifications include the center name and ID', async () => {
+  const config = createConfig(`
+version: 1
+default:
+  centers: [101, 102]
+  slots: ["07:00"]
+  workouts: [X]
+`);
+  const logs = [];
+  const notifications = [];
+  const logger = {
+    ...createLogger(),
+    info: (message) => logs.push(message),
+  };
+  const result = await runBooking({
+    apiClient: {
+      getClasses: async () => createSchedule(),
+      bookClass: async () => {},
+    },
+    config,
+    logger,
+    notifier: {
+      notify: async (message) => {
+        notifications.push(message);
+        return [];
+      },
+    },
+  });
+
+  assert.equal(result.status, 'booked');
+  assert.match(result.message, /center Koramangala \(ID 102\)/);
+  assert.ok(logs.some((message) => message.includes('center Koramangala (ID 102)')));
+  assert.deepEqual(notifications, [`CultBot: ${result.message}`]);
 });
 
 test('center-first order tries later times at the first center', async () => {

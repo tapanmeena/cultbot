@@ -126,19 +126,26 @@ export function findCandidateClass(daySchedule, candidate, enableWaitlist) {
 }
 
 /**
+ * Resolves a center's display name from the schedule metadata.
+ */
+export function getCenterName(classes, centerId) {
+  const info = classes?.centerInfoMap || {};
+  const meta = info[centerId] || info[String(centerId)] || {};
+  return meta.centerName || meta.name || null;
+}
+
+/**
  * Every distinct center that appears anywhere in the schedule, enriched with
  * its display name from the response's centerInfoMap.
  */
 export function listCenters(classes) {
-  const info = classes?.centerInfoMap || {};
   const centers = new Map();
   for (const dayId of Object.keys(classes?.classByDateMap || {})) {
     for (const { center } of iterateClasses(classes.classByDateMap[dayId])) {
       if (!centers.has(center.centerId)) {
-        const meta = info[center.centerId] || info[String(center.centerId)] || {};
         centers.set(center.centerId, {
           id: center.centerId,
-          name: meta.centerName || meta.name || '(name unavailable)',
+          name: getCenterName(classes, center.centerId) || '(name unavailable)',
         });
       }
     }
