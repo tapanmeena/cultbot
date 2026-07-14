@@ -36,7 +36,7 @@ weekly:
 
 # Exact dates override weekly rules.
 dates:
-  "203026-07-19":
+  "2026-07-19":
     profile: default
   "2026-07-20":
     skip: true
